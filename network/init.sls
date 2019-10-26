@@ -7,7 +7,9 @@
 
 hostname-init:
   cmd.wait:
-{% if grains['oscodename'] == 'xenial' %}
+{% if grains['oscodename'] == 'bionic' %}
+    - name: systemctl start hostname
+{% elif grains['oscodename'] == 'xenial' %}
     - name: /etc/init.d/hostname.sh start
 {% elif grains['oscodename'] == 'trusty' %}
     - name: service hostname start

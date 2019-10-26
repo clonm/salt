@@ -41,7 +41,10 @@ docker-ce:
 
 docker-repository:
   pkgrepo.managed:
-    {% if grains['oscodename'] == 'xenial' %}
+    - humanname: Docker
+    {% if grains['oscodename'] == 'bionic' %}
+    - name: deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable
+    {% elif grains['oscodename'] == 'xenial' %}
     - name: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
     {% elif grains['oscodename'] == 'trusty' %}
     - name: deb [arch=amd64] https://download.docker.com/linux/ubuntu trusty stable
@@ -53,9 +56,15 @@ docker-repository:
 
 docker-engine:
   pkg.installed:
-    {% if grains['oscodename'] == 'xenial' %}
+    {% if grains['oscodename'] == 'bionic' %}
+    # docker-engine isn't used anymore. just check the docker-ce version.
+    - name: docker-ce
+    - version: 18.03.1~ce~3-0~ubuntu
+    {% elif grains['oscodename'] == 'xenial' %}
+    - name: docker-engine
     - version: 1.12.5-0~ubuntu-xenial
     {% elif grains['oscodename'] == 'trusty' %}
+    - name: docker-engine
     - version: 1.8.3-0~trusty
     {% endif %}
     - refresh: True
@@ -114,7 +123,7 @@ docker-compose:
 
 docker-configuration-file:
   file.managed:
-    {% if grains['oscodename'] == 'xenial' %}
+    {% if grains['oscodename'] == 'xenial' or grains['oscodename'] == 'bionic' %}
     - name: /etc/systemd/system/docker.service.d/10-execstart.conf
     - source: salt://docker/10-execstart.conf
     {% elif grains['oscodename'] == 'trusty' %}
