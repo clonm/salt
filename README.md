@@ -1,5 +1,10 @@
 Currently we support Ubuntu Server 16.04 installed on the server.
 
+Install prereqs:
+```bash
+sudo apt-get update && install python3-dev
+```
+
 Install `salt-ssh` using `virtualenv`:
 
 ```bash

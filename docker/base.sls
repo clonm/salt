@@ -25,14 +25,14 @@ docker-engine:
 docker.io:
   pkg.removed
 
-docker-repository:
-  pkgrepo.managed:
-    - name: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
-    - file: /etc/apt/sources.list.d/docker-repository.list
-    - key_url: https://download.docker.com/linux/ubuntu/gpg
-    - require_in:
-      - pkg: docker-ce
-
+# docker-repository:
+#   pkgrepo.managed:
+#     - name: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+#     - file: /etc/apt/sources.list.d/docker-repository.list
+#     - key_url: https://download.docker.com/linux/ubuntu/gpg
+#     - require_in:
+#       - pkg: docker-ce
+#
 docker-ce:
   pkg.installed:
     - refresh: True
@@ -72,17 +72,16 @@ docker-engine:
 
 {% endif %}
 
-docker-py:
+python-docker:
   pip.installed:
-    - name: docker-py==1.10.6
+    - name: docker==4.1.0
     - reload_modules: True
     - require:
       - sls: pip
 
 docker-compose:
   pip.installed:
-    # We use an older version of Docker compose because a newer one depends on 2.0 version of docker-py.
-    - name: docker-compose<1.10.0
+    - name: docker-compose==1.25.1
     - require:
       - sls: pip
 

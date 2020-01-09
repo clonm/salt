@@ -1,12 +1,15 @@
 #!pyobjects
 
 import os
-import urllib2
+import urllib.request, urllib.parse, urllib.error
 
 from salt.utils import pyobjects, traverse_dict_and_list
 
 Sls = pyobjects.StateFactory('sls')
-Docker = pyobjects.StateFactory('dockerng')
+DockerImage = pyobjects.StateFactory('docker_image')
+DockerNetwork = pyobjects.StateFactory('docker_network')
+DockerContainer = pyobjects.StateFactory('docker_container')
+DockerVolume = pyobjects.StateFactory('docker_volume')
 Iptables = pyobjects.StateFactory('iptables')
 Kmod = pyobjects.StateFactory('kmod')
 Pkg = pyobjects.StateFactory('pkg')
@@ -39,7 +42,7 @@ def resolve(value):
             if value['type'] == 'pillar':
                 return maybe_join(value, maybe_traverse(value, pillar(value['key'])))
             elif value['type'] == 'request':
-                response = urllib2.urlopen(value['url'])
+                response = urllib.request.urlopen(value['url'])
                 return maybe_join(value, maybe_traverse(value, response.read()))
 
         raise Error("Invalid value: %s" % value)
@@ -103,22 +106,24 @@ firewall = state(
 
 # Automatically configure docker-hosts on all containers when detected
 docker_hosts = None
-for container, cfg in pillar('docker:containers', {}).items():
+for container, cfg in list(pillar('docker:containers', {}).items()):
     if cfg.get('image', '') != 'tozd/docker-hosts':
         continue
 
     # Find the volume bound under /hosts
-    for vol_name, vol_cfg in cfg.get('volumes', {}).iteritems():
+    for vol_name, vol_cfg in list(cfg.get('volumes', {}).items()):
         if vol_cfg.get('bind', '') == '/hosts':
             docker_hosts = (container, vol_name)
             break
 
 # Setup docker containers
-for container, cfg in pillar('docker:containers', {}).items():
+for container, cfg in list(pillar('docker:containers', {}).items()):
     cfg.setdefault('volumes', {})
 
+    print("...Setting up container", container,
+            "based on %s:%s" % (cfg['image'], cfg.get('tag', 'latest')))
     docker_image = state(
-        Docker, 'image_present',
+        DockerImage, 'present',
         '%s-image' % container,
         name="%s:%s" % (cfg['image'], cfg.get('tag', 'latest')),
         # Pull image even if already present.
@@ -143,7 +148,7 @@ for container, cfg in pillar('docker:containers', {}).items():
             }
 
     # Create the required configs
-    for cfg_name, cfg_path in cfg.get('config', {}).items():
+    for cfg_name, cfg_path in list(cfg.get('config', {}).items()):
         contents = pillar('docker:configs:%s' % cfg_name)
         if contents:
             cfg_host_path = os.path.join('/srv/storage/config', cfg_name)
@@ -160,8 +165,8 @@ for container, cfg in pillar('docker:containers', {}).items():
             requires.append(volume)
 
     # Create the required files
-    for file_path, contents in cfg.get('files', {}).items():
-        if isinstance(contents, basestring):
+    for file_path, contents in list(cfg.get('files', {}).items()):
+        if isinstance(contents, str):
             user = 'root'
             group = 'root'
             mode = 644
@@ -197,7 +202,8 @@ for container, cfg in pillar('docker:containers', {}).items():
         }
 
     # Create the required volumes
-    for vol_name, vol_cfg in cfg['volumes'].items():
+    for vol_name, vol_cfg in list(cfg['volumes'].items()):
+        print("config for", vol_name, ":", vol_cfg)
         if vol_cfg.get('readonly', False):
             read_flag = 'ro'
         else:
@@ -239,7 +245,7 @@ for container, cfg in pillar('docker:containers', {}).items():
             volume = None
         elif vol_type == 'container':
             # Dependency from another container
-            volume = Docker('%s-container' % vol_cfg['container'])
+            volume = DockerVolume('%s-container' % vol_cfg['container'])
 
         if volume is not None:
             requires.append(volume)
@@ -255,7 +261,7 @@ for container, cfg in pillar('docker:containers', {}).items():
         requires.append(module)
 
     # Setup required sysctls on the host
-    for sysctl_name, sysctl_value in cfg.get('sysctl', {}).items():
+    for sysctl_name, sysctl_value in list(cfg.get('sysctl', {}).items()):
         sysctl = state(
             Sysctl, 'present',
             sysctl_name,
@@ -264,7 +270,7 @@ for container, cfg in pillar('docker:containers', {}).items():
         requires.append(sysctl)
 
     # Setup required sysfs configuration on the host
-    for sysfs_name, sysfs_value in cfg.get('sysfs', {}).items():
+    for sysfs_name, sysfs_value in list(cfg.get('sysfs', {}).items()):
         sysfs = state(
             File, 'managed',
             sysfs_name,
@@ -276,14 +282,14 @@ for container, cfg in pillar('docker:containers', {}).items():
 
     # Setup required links
     links = []
-    for link_name, link_alias in cfg.get('links', {}).items():
-        requires.append(Docker('%s-container' % link_name))
+    for link_name, link_alias in list(cfg.get('links', {}).items()):
+        requires.append(DockerVolume('%s-container' % link_name))
         links.append("%s:%s" % (link_name, link_alias))
 
     # Setup dependencies
     for dependency in cfg.get('dependencies', []):
-        requires.append(Docker('%s-container' % dependency))
-        watches.append(Docker('%s-container' % dependency))
+        requires.append(DockerContainer('%s-container' % dependency))
+        watches.append(DockerContainer('%s-container' % dependency))
 
     # Setup required ports
     port_bindings = []
@@ -292,9 +298,9 @@ for container, cfg in pillar('docker:containers', {}).items():
     # to support binding the same port to multiple IPs/ports.
     ports = cfg.get('ports', {})
     if isinstance(ports, dict):
-        ports = ports.items()
+        ports = list(ports.items())
     else:
-        ports = [one_port for port in ports for one_port in port.items()]
+        ports = [one_port for port in ports for one_port in list(port.items())]
     for port_def, port_bind in ports:
         if port_def not in exposed_ports:
             exposed_ports.append(port_def)
@@ -382,13 +388,13 @@ for container, cfg in pillar('docker:containers', {}).items():
             if isinstance(item, dict):
                 # Direct environment variable specification
                 environment.update(item)
-            elif isinstance(item, basestring):
+            elif isinstance(item, str):
                 # Reference to common environment
                 item = pillar('docker:environments:%s' % item)
                 environment.update(item)
 
     # Assure that all values are strings.
-    for key, value in environment.items():
+    for key, value in list(environment.items()):
       environment[key] = str(resolve(value))
 
     # Configure resource limits
@@ -400,15 +406,15 @@ for container, cfg in pillar('docker:containers', {}).items():
         if isinstance(network_mode, str):
             pass
         elif network_mode.get('type', None) == 'container':
-            requires.append(Docker('%s-container' % network_mode['container']))
+            requires.append(DockerNetwork('%s-container' % network_mode['container']))
             network_mode = 'container:%s' % network_mode['container']
         else:
             # TODO: Support attaching to multiple networks.
-            # TODO: Is there a better way to require a network's state without recreating it every time?
             network_mode['name'] = resolve(network_mode['name'])
+            network_mode['driver'] = 'bridge'
 
             docker_network = state(
-                Docker, 'network_present',
+                DockerNetwork, 'present',
                 '%s-network' % network_mode['name'],
                 name=network_mode['name'],
                 driver=network_mode.get('driver', None),
@@ -465,7 +471,7 @@ for container, cfg in pillar('docker:containers', {}).items():
        properties['ports'] = exposed_ports
 
     docker_container = state(
-        Docker, 'running',
+        DockerContainer, 'running',
         '%s-container' % container,
         name=container,
         image='%s:%s' % (cfg['image'], cfg.get('tag', 'latest')),
@@ -473,7 +479,7 @@ for container, cfg in pillar('docker:containers', {}).items():
         port_bindings=port_bindings,
         memory=resources.get('memory', 0),
         privileged=cfg.get('privileged', False),
-        network_mode=network_mode,
+        networks=network_mode,
         binds=binds,
         links=links,
         restart_policy=restart_policy,
