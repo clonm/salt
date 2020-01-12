@@ -1,6 +1,5 @@
 debsums:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 debsums-init:
   cmd.wait:

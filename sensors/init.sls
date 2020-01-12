@@ -1,9 +1,7 @@
 lm-sensors:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 sensord:
   pkg.latest:
-    - refresh: True
     - require:
       - pkg: lm-sensors

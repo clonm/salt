@@ -1,6 +1,5 @@
 smartmontools:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 /etc/default/smartmontools:
   file.managed:

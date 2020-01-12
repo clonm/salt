@@ -1,3 +1,2 @@
 python-mysqldb:
-  pkg.latest:
-    - refresh: True
+  pkg.latest

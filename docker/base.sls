@@ -1,10 +1,8 @@
 apt-transport-https:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 ca-certificates:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 {% if salt['pillar.get']('docker:release', None) == 'docker-ce' %}
 
@@ -34,8 +32,7 @@ docker.io:
 #       - pkg: docker-ce
 #
 docker-ce:
-  pkg.installed:
-    - refresh: True
+  pkg.installed
 
 {% else %}
 
@@ -67,7 +64,6 @@ docker-engine:
     - name: docker-engine
     - version: 1.8.3-0~trusty
     {% endif %}
-    - refresh: True
     - hold: True
 
 {% endif %}

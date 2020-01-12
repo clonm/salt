@@ -1,6 +1,5 @@
 ntp:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 ntp-service:
   service.running:

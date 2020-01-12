@@ -1,6 +1,6 @@
 exim4:
   pkg.latest:
-    - refresh: True
+    - name: exim4
   service.running:
     - watch:
       - pkg: exim4

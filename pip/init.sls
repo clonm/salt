@@ -1,6 +1,5 @@
 python3-setuptools:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 python-pip-package:
   pkg.purged:
@@ -9,7 +8,6 @@ python-pip-package:
 {% if grains['oscodename'] == 'xenial' or grains['oscodename'] == 'bionic' %}
 python3-pip:
   pkg.latest:
-    - refresh: True
     - reload_modules: True
 {% elif grains['oscodename'] == 'trusty' %}
 python3-pip:

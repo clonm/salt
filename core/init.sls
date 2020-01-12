@@ -40,34 +40,18 @@ sysfsutils:
     - require:
       - pkg: sysfsutils
 
-htop:
+init_packages:
   pkg.latest:
-    - refresh: True
-
-iotop:
-  pkg.latest:
-    - refresh: True
-
-sysstat:
-  pkg.latest:
-    - refresh: True
-
-iptraf:
-  pkg.latest:
-    - refresh: True
-
-tcpdump:
-  pkg.latest:
-    - refresh: True
-
-python-gnupg:
-  pkg.latest:
+    - pkgs:
+      - htop
+      - iotop
+      - sysstat
+      - iptraf
+      - tcpdump
+      - python3-gnupg
+      - python-apt
     - refresh: True
     - reload_modules: True
-
-python-apt:
-  pkg.latest:
-    - refresh: True
 
 inputrc-history:
   file.blockreplace:

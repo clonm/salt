@@ -1,6 +1,5 @@
 screen:
-  pkg.latest:
-    - refresh: True
+  pkg.latest
 
 screenrc-scrollback:
   file.replace:
