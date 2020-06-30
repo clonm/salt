@@ -3,7 +3,8 @@
 import os
 import urllib.request, urllib.parse, urllib.error
 
-from salt.utils import pyobjects, traverse_dict_and_list
+from salt.utils import pyobjects
+from salt.utils.data import traverse_dict_and_list
 
 Sls = pyobjects.StateFactory('sls')
 DockerImage = pyobjects.StateFactory('docker_image')
